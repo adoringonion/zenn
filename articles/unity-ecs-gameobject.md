@@ -1,14 +1,18 @@
 ---
 title: "Unity ECSとGameObjectを連携させる"
-emoji: "🕌"
+emoji: "🐰"
 type: "tech"
 topics: ["unity"]
-published: false
+published: true
 ---
+
+## はじめに
+
+既存のGameObjectとECSの連携について、プレビュー版の時の解説をされている記事はいくつか見かけたのですが、正式版だと少しやり方が変わってるようなので、勉強がてら記事にしてみました。
 
 ## 事前準備
 ### Player
-まずPlayerオブジェクトを用意しておきます。RigidbodyをアタッチしたCubeを作成し、WSADで移動できるようにしておきます。
+まず`Player`オブジェクトを用意しておきます。RigidbodyをアタッチしたCubeを作成し、WSADで移動できるようにしておきます。
 
 ```csharp
 public class PlayerMovement : MonoBehaviour
@@ -27,7 +31,7 @@ public class PlayerMovement : MonoBehaviour
 ```
 
 ### Enemy
-SpawnerがEnemyが付いたPrefabをスポーンできるようにしておきます。Enemyは`targetPosition`の方に向かって移動するようになっているので、`targetPosition`にPlayerの位置を更新し続けることでPlayerを追跡するようにしておきます。
+`Spawner`が`Enemy`が付いたPrefabをスポーンできるようにしておきます。`Enemy`は`targetPosition`の方に向かって移動するようになっているので、`targetPosition`に`Player`の位置を更新し続けることで`Player`を追跡するようにしておきます。
 
 
 ```csharp
@@ -90,7 +94,6 @@ public partial struct EnemyMovementJob : IJobEntity
 }
 ```
 
-
 ## GameObject → ECS
 GameObjectからECSへのアクセスは比較的楽です。`World.DefaultGameObjectInjectionWorld.EntityManager`を使うとMonoBehaviourから`EntityManager`を取得できます。`EntityManager`からEntity検索用のクエリを組み立てたあと、それを通じてEntityを取得できます。
 ```csharp
@@ -129,7 +132,7 @@ public partial struct PlayerPositionReceiverSystem : ISystem
         var targetPosition = SystemAPI.GetSingleton<PlayerPositionReceiver>().targetPosition;
         new PlayerPositionReceiverJob
         {
-            targetPosition = targetPosition
+            TargetPosition = targetPosition
         }.ScheduleParallel();
     }
 }
@@ -138,16 +141,138 @@ public partial struct PlayerPositionReceiverSystem : ISystem
 [StructLayout(LayoutKind.Auto)]
 public partial struct PlayerPositionReceiverJob : IJobEntity
 {
-    public float3 targetPosition;
+    public float3 TargetPosition;
     
     private void Execute(ref Enemy enemy)
     {
-        enemy.targetPosition = targetPosition;
+        enemy.targetPosition = TargetPosition;
     }
 }
 ```
 
 もちろん`PlayerPositionSender`からEnemyがついたEntityを検索し、直接値をセットしていくこともできます。ただその場合だと、Entityの数が増えていくのに比例してMonoBehaviour上での計算時間が増えていくため、ECSの恩恵をあまり受けることができません。
 
+以下のように次々とスポーンする`Enemy`をGameObjectの`Player`に追跡させることができました。
+![](https://storage.googleapis.com/zenn-user-upload/37244fa6c046-20230926.gif)
+
 ## ECS → GameObject
-逆の場合は少々面倒です。
+逆の場合は少々面倒です。Managed Componentを使ってECS側からGameObjectにアクセスします。まずは`Player`オブジェクトを保持するだけの`PlayerObjectRef`を作ります。
+
+```csharp
+public class PlayerObjectRef : MonoBehaviour
+{
+    public GameObject playerObject;
+}
+```
+次にこの`PlayerObjectRef`をManagedComponentに変換する処理と、変換後の`PlayerObjectRefManaged`を作ります。
+
+```csharp
+public class PlayerObjectRefManaged : IComponentData
+{
+    public GameObject playerObject;
+
+    public PlayerObjectRefManaged(){} // ManagedComponentは引数なしのコンストラクタが必要
+}
+
+public partial struct PlayerObjectRefInitSystem : ISystem
+{
+    [BurstCompile]
+    public void OnCreate(ref SystemState state) {}
+
+    public void OnUpdate(ref SystemState state)
+    {
+        state.Enabled = false; // 一回だけの実行でいいので無効化しておく
+        InitPlayerObjectRefManaged(ref state);
+    }
+
+    [BurstCompile]
+    public void OnDestroy(ref SystemState state) {}
+    
+    private void InitPlayerObjectRefManaged(ref SystemState state)
+    {
+            var go = GameObject.Find("Player");
+            var playerObjectRef = go.GetComponent<PlayerObjectRef>();
+            var playerObjectRefManaged = new PlayerObjectRefManaged
+            {
+                playerObject = playerObjectRef.playerObject
+            };
+
+            var entity = state.EntityManager.CreateEntity();
+            state.EntityManager.AddComponentData(entity, playerObjectRefManaged);
+    }
+}
+```
+
+`GameObject.Find`と`GetComponent`を使って`PlayerObjectRef`を取得し、それを`PlayerObjectRefManaged`に詰めて`EntityManager`に登録しています。その後各`Enemy`のEntityに`Player`の位置を送る処理を書きます。
+
+```csharp
+public partial struct PlayerObjectRefSystem : ISystem
+{
+    [BurstCompile]
+    public void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<PlayerObjectRefManaged>(); 
+    }
+
+    public void OnUpdate(ref SystemState state)
+    {
+        var playerObjectRefManaged = SystemAPI.ManagedAPI.GetSingleton<PlayerObjectRefManaged>();
+        var targetPosition = playerObjectRefManaged.playerObject.transform.position;
+        new SetTargetPositionJob
+        {
+            TargetPosition = targetPosition
+        }.ScheduleParallel();
+    }
+
+    [BurstCompile]
+    public void OnDestroy(ref SystemState state) {}
+}
+
+[BurstCompile]
+public partial struct SetTargetPositionJob : IJobEntity
+{
+    public float3 TargetPosition { get; set; }
+    
+    private void Execute(ref Enemy enemy)
+    {
+        enemy.targetPosition = TargetPosition;
+    }
+}
+```
+これでGameObject → ECSの時と同様に、`Enemy`に`Player`を追跡させることができました。
+
+### ManagedComponentの注意点
+ManagedComponentを使うとECS側からGameObjectの参照を取ることができますが、注意することがあります。
+https://docs.unity3d.com/Packages/com.unity.entities@1.0/manual/components-managed.html
+- ManagedComponentを使用している関数はBurstCompileの対象にできない
+- 通常のComponent(UnmanagedComponent)よりもアクセス効率が悪い
+
+一つ目に関しては、ManagedComponentにアクセスする部分を限定し、それ以外の部分を細く区切ってBurstCompileの対象にしたり、Jobにすることで影響を最小限にできます。
+
+二つ目に関しては、ManagedComponentが通常のComponentと管理の仕方が違うことに起因しています。以下DeepL訳
+
+> Unmanaged componentsとは異なり、Unityはmanaged componentsをチャンクに直接格納しません。その代わりに、UnityはWorld全体で1つの大きな配列に格納します。そしてチャンクには、関連するmanaged componentsの配列インデックスが格納されます。つまり、Entityのmanaged componentにアクセスすると、Unityは余分なインデックス検索を処理します。このため、managed componentsはunmanaged componentsよりも最適化されません。
+Managed componentsのパフォーマンスへの影響から、可能であれば代わりにunmanaged componentsを使用するべきです。
+
+そのためManagedComponentを使う機会をできるだけ減らすことが望ましいです。
+
+## 比較
+ではGameObject → ECSとECS → GameObjectとではパフォーマンスに差があるのか見てみたいと思います。両者ともに差分がないスポーン処理や`Enemy`の移動処理についてはJobSystemで最適化してあり、`Enemy`を一万体スポーンさせた時を計測してみます。
+
+### GameObject → ECS
+![](https://storage.googleapis.com/zenn-user-upload/6e0602f21a76-20230926.png)
+
+### ECS → GameObject
+![](https://storage.googleapis.com/zenn-user-upload/0bc704de9ac3-20230926.png)
+
+### 結果
+ECS → GameObjectのほうを見ると、確かにManaged Componentにアクセスしている分の負荷があることが分かりますが、オブジェクト一万個ぐらいでは正直JobSystemの恩恵が大きすぎて目に見えた差が出ることはなかったです。
+
+## まとめ
+今回のGameObjectとECSの連携にどれくらいの需要があるかは分かりませんが（そもそもECSみんな使ってる？）、部分的にECSを導入する方法として有効かもしれません。質問やご指摘などあればお気軽にコメントください。
+
+今回調べるにあたってたくさんサポートしていただいた[notargsさん](https://twitter.com/notargs)、ありがとうございました。
+
+## 参考
+- [ECSの公式サンプルリポジトリ](https://github.com/Unity-Technologies/EntityComponentSystemSamples/tree/master)
+  - 今回の実装はこのリポジトリの[HelloCube/GameObjectSync](https://github.com/Unity-Technologies/EntityComponentSystemSamples/tree/master/EntitiesSamples/Assets/HelloCube/8.%20GameObjectSync)をベースにしています
