@@ -27,7 +27,7 @@ public class PlayerMovement : MonoBehaviour
 ```
 
 ### Enemy
-SpawnerがEnemyが付いたPrefabをスポーンできるようにしておきます。EnemyはtargetPositionの方に向かって移動するようになっているので、targetPositionにPlayerの位置を更新し続けることでPlayerを追跡するようにしておきます。
+SpawnerがEnemyが付いたPrefabをスポーンできるようにしておきます。Enemyは`targetPosition`の方に向かって移動するようになっているので、`targetPosition`にPlayerの位置を更新し続けることでPlayerを追跡するようにしておきます。
 
 
 ```csharp
@@ -92,7 +92,7 @@ public partial struct EnemyMovementJob : IJobEntity
 
 
 ## GameObject → ECS
-GameObjectからECSへのアクセスは比較的楽です。`World.DefaultGameObjectInjectionWorld.EntityManager`を使うとMonoBehaviourからEntityManagerを取得できます。EntityManagerからEntity検索用のクエリを組み立てたあと、それを通じてEntityを取得できます。
+GameObjectからECSへのアクセスは比較的楽です。`World.DefaultGameObjectInjectionWorld.EntityManager`を使うとMonoBehaviourから`EntityManager`を取得できます。`EntityManager`からEntity検索用のクエリを組み立てたあと、それを通じてEntityを取得できます。
 ```csharp
 public class PlayerPositionSender : MonoBehaviour 
 {
@@ -110,7 +110,44 @@ public class PlayerPositionSender : MonoBehaviour
 今回はPlayerの位置をECSに送るための`PlayerPositionSender`と、ECS側でそれを受け取る`PlayerPositionReceiver`を作っています。
 
 ```csharp
+public partial struct PlayerPositionReceiverSystem : ISystem
+{
+    public void OnCreate(ref SystemState state)
+    {
+        state.RequireForUpdate<PlayerPositionReceiver>();
+        state.EntityManager.CreateSingleton<PlayerPositionReceiver>(); // シングルトンとして生成しておきます
+    }
+
+    public void OnDestroy(ref SystemState state)
+    {
+        
+    }
+    
+    [BurstCompile]
+    public void OnUpdate(ref SystemState state)
+    {
+        var targetPosition = SystemAPI.GetSingleton<PlayerPositionReceiver>().targetPosition;
+        new PlayerPositionReceiverJob
+        {
+            targetPosition = targetPosition
+        }.ScheduleParallel();
+    }
+}
+
+[BurstCompile]
+[StructLayout(LayoutKind.Auto)]
+public partial struct PlayerPositionReceiverJob : IJobEntity
+{
+    public float3 targetPosition;
+    
+    private void Execute(ref Enemy enemy)
+    {
+        enemy.targetPosition = targetPosition;
+    }
+}
 ```
 
-もちろんPlayerPositionSenderからEnemyがついたEntityを検索し、直接値をセットしていくこともできます。ただその場合だと、Entityの数が増えていくのに比例してMonoBehaviour上での計算時間が増えていくため、ECSの恩恵をあまり受けることができません。
+もちろん`PlayerPositionSender`からEnemyがついたEntityを検索し、直接値をセットしていくこともできます。ただその場合だと、Entityの数が増えていくのに比例してMonoBehaviour上での計算時間が増えていくため、ECSの恩恵をあまり受けることができません。
 
+## ECS → GameObject
+逆の場合は少々面倒です。
