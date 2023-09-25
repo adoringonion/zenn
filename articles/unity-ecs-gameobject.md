@@ -9,6 +9,7 @@ published: true
 ## はじめに
 
 既存のGameObjectとECSの連携について、プレビュー版の時の解説をされている記事はいくつか見かけたのですが、正式版だと少しやり方が変わってるようなので、勉強がてら記事にしてみました。
+今回はUnity公式の[Spawner Example](https://docs.unity3d.com/Packages/com.unity.entities@1.0/manual/ecs-workflow-example.html)をベースとして、SubScene内にスポーンした敵オブジェクトを従来のGameObjectで構成されたプレイヤーオブジェクトを追いかけるものを作っていきます。
 
 ## 事前準備
 ### Player
