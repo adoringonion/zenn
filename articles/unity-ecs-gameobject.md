@@ -261,15 +261,19 @@ Managed componentsのパフォーマンスへの影響から、可能であれ�
 ではGameObject → ECSとECS → GameObjectとではパフォーマンスに差があるのか見てみたいと思います。両者ともに差分がないスポーン処理や`Enemy`の移動処理についてはJobSystemで最適化してあり、`Enemy`を一万体スポーンさせた時を計測してみます。
 
 ### GameObject → ECS
-![](https://storage.googleapis.com/zenn-user-upload/6e0602f21a76-20230926.png)
+![](https://storage.googleapis.com/zenn-user-upload/9674e7f799a8-20230927.png)
+![](https://storage.googleapis.com/zenn-user-upload/93c687ab4901-20230927.png)
+GameObjectからECSへアクセスする`PlayerPositionSender`の処理時間が0.068ms、各`Enemy`へ値をセットする`PlayerPositionReceiverJob`の処理時間が0.006msだったため、合計0.074msです。
 
 ### ECS → GameObject
-![](https://storage.googleapis.com/zenn-user-upload/0bc704de9ac3-20230926.png)
+![](https://storage.googleapis.com/zenn-user-upload/fd3064da678f-20230927.png)
+![](https://storage.googleapis.com/zenn-user-upload/4a5ae803d531-20230927.png)
+ECSからGameObjectへアクセスする`PlayerObjectRefSystem`の処理時間が0.066ms、各`Enemy`へ値をセットする`SetTargetPositionJob`の処理時間が0.019msだったため、合計0.085msです。
 
 ### 結果
-ECS → GameObjectのほうを見ると、確かにManaged Componentにアクセスしている分の負荷があることが分かりますが、オブジェクト一万個ぐらいでは正直JobSystemの恩恵が大きすぎて目に見えた差が出ることはなかったです。
+`PlayerPositionReceiverJob`と`SetTargetPositionJob`とで0.013msの差がありましたが、両方とも実装が全く同じなため、おそらく誤差だと考えられます。そのため今回のような簡単な処理では、GameObject → ECSとECS → GameObjectのどちらを使ってもパフォーマンスにそこまで差がないと考えられ、パフォーマンスの観点ではどちらを使うほうがいいか判断を下すことができませんでした。
 
-## まとめ
+## さいごに
 今回のGameObjectとECSの連携にどれくらいの需要があるかは分かりませんが（そもそもECSみんな使ってる？）、部分的にECSを導入する方法として有効かもしれません。質問やご指摘などあればお気軽にコメントください。
 
 今回調べるにあたってたくさんサポートしていただいた[notargsさん](https://twitter.com/notargs)、ありがとうございました。
