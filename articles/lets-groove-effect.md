@@ -16,6 +16,10 @@ RenderGraphはUnity6からURPに導入され、6.4からはデフォルトにな
 https://youtu.be/Lrle0x_DHBM?si=gDZG7Sx1TySWDIH4&t=60
 大体1分あたりに出てくる、人物にカラフルな残像がつくエフェクトをRenderGraphで実装してきます。
 
+:::message
+- Unityバージョン: 6000.2.11f1
+- URPバージョン: 17.2.0
+:::
 
 ## 方針
 
