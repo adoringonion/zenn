@@ -1,7 +1,7 @@
-﻿---
+---
 title: "Earth, Wind & FireっぽいエフェクトをRenderGraphで実装する"
 emoji: "🌈"
-type: "tech"
+type: "tech" # tech: 技術記事 / idea: アイデア
 topics: ["Unity"]
 published: false
 ---
@@ -455,6 +455,8 @@ Shader "Hidden/Afterimage/Accumulation"
 }
 ```
 :::
+
+![](https://storage.googleapis.com/zenn-user-upload/faff0f2800e7-20251128.gif)
 
 ## 2. 色相をシフトする
 
@@ -915,6 +917,8 @@ Shader "Hidden/Afterimage/Accumulation"
 
 :::
 
+![](https://storage.googleapis.com/zenn-user-upload/2bfa9139f996-20251128.gif)
+
 ## 3. ステンシルバッファを使って本体と重ならないように合成
 
 現在の実装だとプレイヤーオブジェクトに残像エフェクトが重なり、プレイヤーオブジェクト自体が少し明るくなります。プレイヤーオブジェクトに影響せず残像を表示するためにステンシルバッファを使います
@@ -1270,6 +1274,8 @@ public class AfterimageRenderFeature : ScriptableRendererFeature
             #pragma target 4.5
 ```
 :::
+
+![](https://storage.googleapis.com/zenn-user-upload/26c5301fcb5b-20251128.gif)
 
 ## まとめ
 1. プレイヤーだけを専用 RT に描き、ステンシルを仕込む。
