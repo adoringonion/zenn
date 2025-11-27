@@ -16,7 +16,6 @@ RenderGraphはUnity6からURPに導入され、6.4からはデフォルトにな
 https://youtu.be/Lrle0x_DHBM?si=gDZG7Sx1TySWDIH4&t=60
 大体1分あたりに出てくる、人物にカラフルな残像がつくエフェクトをRenderGraphで実装してきます。
 
----
 
 ## 方針
 
@@ -27,8 +26,6 @@ https://youtu.be/Lrle0x_DHBM?si=gDZG7Sx1TySWDIH4&t=60
 - 残像は色相が時間で変化する
 
 という感じなので、以下の画像のような流れで実装します。
-
-
 
 
 
@@ -458,8 +455,6 @@ Shader "Hidden/Afterimage/Accumulation"
 }
 ```
 :::
-
----
 
 ## 2. 色相をシフトする
 
@@ -1275,9 +1270,6 @@ public class AfterimageRenderFeature : ScriptableRendererFeature
             #pragma target 4.5
 ```
 :::
-
-
----
 
 ## まとめ
 1. プレイヤーだけを専用 RT に描き、ステンシルを仕込む。
