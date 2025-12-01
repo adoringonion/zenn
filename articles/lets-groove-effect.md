@@ -6,7 +6,7 @@ topics: ["Unity", "shader"]
 published: true
 ---
 
-この記事は [Anthrotech Advent Calendar 2025](https://adventar.org/calendars/11972) の1日目の記事です。Antorotechについては [こちら](https://anthrotech.dev/) をご覧ください。
+この記事は [Anthrotech Advent Calendar 2025](https://adventar.org/calendars/11972) の1日目の記事です。Anthrotech Advent Calendar 2025については [こちら](https://anthrotech.dev/) をご覧ください。
 
 ## はじめに
 
