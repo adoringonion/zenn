@@ -6,11 +6,11 @@ topics: ["Unity", "shader"]
 published: true
 ---
 
-この記事は [Anthrotech Advent Calendar 2025](https://adventar.org/calendars/11972) の1日目の記事です。Anthrotech Advent Calendar 2025については [こちら](https://anthrotech.dev/) をご覧ください。
+この記事は [Anthrotech Advent Calendar 2025](https://adventar.org/calendars/11972) の1日目の記事です。Anthrotechについては [こちら](https://anthrotech.dev/) をご覧ください。
 
 ## はじめに
 
-RenderGraphはUnity6からURPに導入され、6.4からはデフォルトになって従来の書き方ができなくなるので今のうちに慣れておこうと思い、エフェクトを作ってみます。
+RenderGraphはUnity6からURPに導入され、6.5からはデフォルトになって従来の書き方ができなくなるので今のうちに慣れておこうと思い、エフェクトを作ってみます。
 
 今回作るのはEarth Wind and FireのLet's Grooveっぽいエフェクトです。
 https://youtu.be/Lrle0x_DHBM?si=gDZG7Sx1TySWDIH4&t=60
