@@ -1,5 +1,5 @@
 ---
-title: "Spineを雑に使ってイラストを使かす"
+title: "Spineを雑に使ってイラストを動かす"
 emoji: "🖼️"
 type: "idea" # tech: 技術記事 / idea: アイデア
 topics: ["Spine"]
